@@ -1,5 +1,3 @@
-"""Example DAGs test. This test ensures that all Dags have tags, retries set to two, and no import errors. This is an example pytest and may not be fit the context of your DAGs. Feel free to add and remove tests."""
-
 import os
 import logging
 from contextlib import contextmanager
@@ -30,7 +28,8 @@ def get_import_errors():
 
         # prepend "(None,None)" to ensure that a test object is always created even if it's a no op.
         return [(None, None)] + [
-            (strip_path_prefix(k), v.strip()) for k, v in dag_bag.import_errors.items()
+            (strip_path_prefix(k), v.strip())
+            for k, v in dag_bag.import_errors.items()
         ]
 
 
@@ -44,7 +43,9 @@ def get_dags():
     def strip_path_prefix(path):
         return os.path.relpath(path, os.environ.get("AIRFLOW_HOME"))
 
-    return [(k, v, strip_path_prefix(v.fileloc)) for k, v in dag_bag.dags.items()]
+    return [
+        (k, v, strip_path_prefix(v.fileloc)) for k, v in dag_bag.dags.items()
+    ]
 
 
 @pytest.mark.parametrize(

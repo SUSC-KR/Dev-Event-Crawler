@@ -68,7 +68,9 @@ class magic_dict(dict):
 _no_default = object()  # allow falsey defaults
 
 
-def variable_get_monkeypatch(key: str, default_var=_no_default, deserialize_json=False):
+def variable_get_monkeypatch(
+    key: str, default_var=_no_default, deserialize_json=False
+):
     print(
         f"Attempted to get Variable value during parse, returning a mocked value for {key}"
     )
@@ -119,7 +121,9 @@ def get_import_errors():
         for file_path in dag_bag.dags:
             # Check if the file_path is not in import_errors, meaning no errors
             if file_path not in dag_bag.import_errors:
-                result.append((strip_path_prefix(file_path), "No import errors"))
+                result.append(
+                    (strip_path_prefix(file_path), "No import errors")
+                )
 
         return result
 
@@ -129,11 +133,7 @@ def get_import_errors():
 )
 def test_file_imports(rel_path, rv):
     """Test for import errors on a file"""
-    if os.path.exists(".astro/dag_integrity_exceptions.txt"):
-        with open(".astro/dag_integrity_exceptions.txt", "r") as f:
-            exceptions = f.readlines()
-    print(f"Exceptions: {exceptions}")
-    if (rv != "No import errors") and rel_path not in exceptions:
+    if rv != "No import errors":
         # If rv is not "No import errors," consider it a failed test
         raise Exception(f"{rel_path} failed to import with message \n {rv}")
     else:
