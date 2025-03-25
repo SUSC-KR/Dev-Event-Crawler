@@ -1,0 +1,61 @@
+default_stages: [pre-commit, pre-push]
+default_language_version:
+  python: python3
+  node: 22.14.0
+minimum_pre_commit_version: '3.2.0'
+
+repos:
+  - repo: meta
+    hooks:
+      - id: identity
+        name: Print checked files
+        description: Print input to the static check hooks for troubleshooting
+      - id: check-hooks-apply
+        name: Check if all hooks apply to the repository
+
+  - repo: https://github.com/asottile/blacken-docs
+    rev: 1.19.1
+    hooks:
+      - id: blacken-docs
+        name: Run black on docs
+        args:
+          - --line-length=120
+          - --target-version=py39
+          - --target-version=py310
+          - --target-version=py311
+          - --target-version=py312
+        alias: blacken-docs
+        additional_dependencies: [black==24.10.0]
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-merge-conflict
+        name: Check that merge conflicts are not being committed
+      - id: debug-statements
+        name: Detect accidentally committed debug statements
+      - id: check-builtin-literals
+        name: Require literal syntax when initializing builtins
+      - id: detect-private-key
+        name: Detect if private key is added to the repository
+        exclude: ^providers/ssh/docs/connections/ssh.rst$
+      - id: mixed-line-ending
+        name: Detect if mixed line ending is used (\r vs. \r\n)
+      - id: trailing-whitespace
+        name: Remove trailing whitespace at end of line
+      - id: fix-encoding-pragma
+        name: Remove encoding header from Python files
+        args:
+          - --remove
+  - repo: https://github.com/pre-commit/pygrep-hooks
+    rev: v1.10.0
+    hooks:
+      - id: python-no-log-warn
+        name: Check if there are no deprecate log warn
+  - repo: https://github.com/PyCQA/flake8
+    rev: 7.1.2
+    hooks:
+      - id: flake8
+        name: Flake8 Python Linter
+        description: "Checks Python code for style violations and errors."
+        args:
+          - --max-line-length=120
