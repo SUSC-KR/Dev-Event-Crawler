@@ -1,0 +1,21 @@
+services:
+  selenium-chromium:
+    image: selenium/standalone-chromium:latest
+    container_name: selenium-chromium
+    ports:
+      - "4444:4444"
+      - "7900:7900"
+    shm_size: "2gb"
+    restart: always
+    networks:
+      - selenium-network
+
+  scheduler:
+    depends_on:
+      - selenium-chromium
+    networks:
+      - selenium-network
+
+networks:
+  selenium-network:
+    driver: bridge
