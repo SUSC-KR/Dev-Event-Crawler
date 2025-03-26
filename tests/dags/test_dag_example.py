@@ -51,6 +51,7 @@ def get_dags():
 @pytest.mark.parametrize(
     "rel_path,rv", get_import_errors(), ids=[x[0] for x in get_import_errors()]
 )
+
 def test_file_imports(rel_path, rv):
     """Test for import errors on a file"""
     if rel_path and rv:
@@ -63,6 +64,7 @@ APPROVED_TAGS = {}
 @pytest.mark.parametrize(
     "dag_id,dag,fileloc", get_dags(), ids=[x[2] for x in get_dags()]
 )
+
 def test_dag_tags(dag_id, dag, fileloc):
     """
     test if a DAG is tagged and if those TAGs are in the approved list
@@ -75,6 +77,7 @@ def test_dag_tags(dag_id, dag, fileloc):
 @pytest.mark.parametrize(
     "dag_id,dag, fileloc", get_dags(), ids=[x[2] for x in get_dags()]
 )
+
 def test_dag_retries(dag_id, dag, fileloc):
     """
     test if a DAG has retries set
