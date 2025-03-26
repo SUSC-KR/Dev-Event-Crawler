@@ -57,9 +57,16 @@ def modify_and_commit():
                 return output_file
 
             markdown_output = "# Event List\n\n"
+            markdown_output += "## 프로젝트의 목적\n\n"
+            markdown_output += "현재 개발자 행사를 모아두는 다양한 플랫폼이 존재하지만, 대부분의 정보는 수동 등록이 필요하며 지속적인 관리가 필요합니다."
+            markdown_output += "이 프로젝트는 행사 주최자와 프로젝트 관리자의 이러한 반복적인 작업을 자동화하여 최신 개발자 행사 정보를 손쉽게 제공하는 것을 목표로 합니다.\n\n"
+            markdown_output += "새로운 행사 사이트 추가 또는 버그 제보는 "
+            markdown_output += "[프로젝트 레포지토리](https://github.com/SUSC-KR/Dev-Event-Crawler)의 "
+            markdown_output += "이슈 페이지를 통해 해주시면 감사하겠습니다.\n\n"
+            markdown_output += "## 이벤트 목록\n\n"
             for event in events:
                 title, url, date, price, host, location = event
-                markdown_output += f"## [{title}]({url})\n"
+                markdown_output += f"### [{title}]({url})\n"
                 markdown_output += f"- **Date:** {date}\n"
                 markdown_output += f"- **Price:** {price}\n"
                 markdown_output += f"- **Host:** {host}\n"
