@@ -2,19 +2,16 @@ import time
 import pandas as pd
 import logging
 import datetime
+from urllib.parse import urlparse
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 
 from ...format_functions.format_event_date import format_event_date
-
 
 from .settings import (
     SEARCH_URL,
     WAIT_TIME,
-    NEXT_BUTTON_XPATH,
 )
 
 logging.basicConfig(
@@ -22,7 +19,7 @@ logging.basicConfig(
 )
 
 
-class EventUsCrawler:
+class MeetupsCrawler:
     def __init__(self):
         chrome_options = Options()
         chrome_options.add_argument("--headless")
@@ -42,6 +39,10 @@ class EventUsCrawler:
         self.driver.implicitly_wait(WAIT_TIME)
         self.events_data = []
 
+    def remove_url_params(self, url: str) -> str:
+        parsed_url = urlparse(url)
+        return f"{parsed_url.scheme}://{parsed_url.netloc}{parsed_url.path}"
+
     def get_element_text(self, xpaths: list):
         """리스트에 있는 모든 XPath에서 텍스트를 순차적으로 찾고, 텍스트가 있으면 반환"""
         for xpath in xpaths:
@@ -57,29 +58,30 @@ class EventUsCrawler:
     def scrape_event_details(self, event_url):
         """개별 행사 페이지에서 세부 정보를 크롤링"""
         self.driver.get(event_url)
+        self.driver.implicitly_wait(WAIT_TIME)
 
-        event_title = self.get_element_text(
-            [
-                '//*[@id="app"]/div[1]/div[2]/div[1]/div[2]/div/div/div[2]',
-                '//*[@id="app"]/div[1]/div[2]/div[1]/div[1]/div/div/div[2]',
-                '//*[@id="app"]/div[1]/div[3]/div[1]/div[2]/div/div/div[2]',
-            ]
-        )
+        event_title = self.get_element_text(['//*[@id="main"]/div[2]/div/h1'])
 
         event_date = self.get_element_text(
-            ['//*[@id="infoSection"]/dl/div[1]/dd/span']
+            [
+                '//*[@id="event-info"]/div[1]/div[1]/div[1]/div[2]/div/time',
+                '//*[@id="event-info"]/div[1]/div[1]/div[2]/div[2]/div/time',
+            ]
         )
-        event_description = self.get_element_text(
-            ['//*[@id="infoSection"]/div[2]/div[1]']
-        )
+        event_description = self.get_element_text(['//*[@id="event-details"]'])
         event_price = self.get_element_text(
-            ['//*[@id="infoSection"]/dl/div[3]/dd/span']
+            ['//*[@id="main"]/div[4]/div/div/div[2]/div/div[1]/div/div/span']
         )
         event_location = self.get_element_text(
-            ['//*[@id="infoSection"]/dl/div[4]/dd/span']
+            [
+                '//*[@id="event-info"]/div[1]/div[1]/div[3]/div/div[2]/div',
+                '//*[@id="event-info"]/div[1]/div[1]/div[4]/div/div[2]/div',
+            ]
         )
         event_host = self.get_element_text(
-            ['//*[@id="channelSection"]/div[2]/div[1]/div/div/div[1]/a/span']
+            [
+                '//*[@id="main"]/div[3]/div[1]/div/div[2]/div[2]/div[1]/div/a/div/div[1]/div'
+            ]
         )
 
         if not event_description:
@@ -105,28 +107,39 @@ class EventUsCrawler:
         return today.strftime("%Y-%m-%d"), two_months_later.strftime("%Y-%m-%d")
 
     def scrape_events(self):
-        """이벤트 목록을 크롤링하고 세부 정보 추출"""
+        """이벤트 목록을 크롤링하고 세부 정보 추출 (스크롤 방식)"""
         start_date, end_date = self.get_date_range_upcoming_2_months()
-        date_range_url = f"&date={start_date}~{end_date}"
-        self.driver.get(SEARCH_URL + date_range_url)
+        date_range_url = f"S&customStartDate={start_date}T11%3A00%3A00-04%3A00&customEndDate={end_date}T10%3A59%3A00-04%3A00"
+        mile_range_url = "&distance=hundredMiles&location=kr--Seoul"
+        scrap_url = SEARCH_URL + date_range_url + mile_range_url
+        logging.info(f"크롤링할 URL: {scrap_url}")
+        self.driver.get(scrap_url)
 
         event_urls = []
 
-        while True:
-            for i in range(1, 13):  # 한 페이지당 최대 12개 이벤트
-                try:
-                    event_xpath = f'//*[@id="eventSection"]/div[3]/div[{i}]/div/div[2]/div[2]/a'
-                    event_url = self.driver.find_element(
-                        By.XPATH, event_xpath
-                    ).get_attribute("href")
-                    if event_url:
-                        event_urls.append(event_url)
-                except Exception as e:
-                    logging.error(f"Error fetching event link {i}: {e}")
-                    continue
+        self.driver.execute_script(
+            "window.scrollTo(0, document.body.scrollHeight);"
+        )
+        time.sleep(2)
 
-            if not self.click_next():
-                break
+        parent_element = self.driver.find_element(
+            By.XPATH, '//*[@id="main"]/div/div[2]/div[1]/div/div/div[1]'
+        )
+
+        child_divs = parent_element.find_elements(By.XPATH, "./div")
+        logging.info(f"현재 페이지의 이벤트 개수: {len(child_divs)}")
+
+        for i in range(1, len(child_divs)):
+            event_xpath = f'//*[@id = "main"]/div/div[2]/div[1]/div/div/div/div[{i}]/div/div/div[1]/div[2]/a'
+            event_url = self.driver.find_element(
+                By.XPATH, event_xpath
+            ).get_attribute("href")
+            if event_url:
+                event_url = self.remove_url_params(event_url)
+                event_urls.append(event_url)
+
+            if len(event_urls) == 0:
+                logging.info("No more events to scrape.")
 
         for event_url in event_urls:
             logging.info(f"크롤링 중: {event_url}")
@@ -134,28 +147,14 @@ class EventUsCrawler:
             if event_data:
                 self.events_data.append(event_data)
 
-    def click_next(self):
-        """다음 페이지 버튼 클릭"""
-        try:
-            next_button = WebDriverWait(self.driver, 5).until(
-                EC.element_to_be_clickable((By.XPATH, NEXT_BUTTON_XPATH))
-            )
-            next_button.click()
-            time.sleep(WAIT_TIME)
-            logging.info("다음 페이지 이동")
-            return True
-        except Exception:
-            logging.info("다음 페이지가 없습니다.")
-            return False
-
     def fetch_events_upcoming_2_months(self) -> pd.DataFrame:
         """
-        Eventus 웹사이트에서 향후 2개월 동안 열릴 행사를 가져옴.
+        Meetups 웹사이트에서 향후 2개월 동안 열릴 행사를 가져옴.
         """
         self.scrape_events()
-        eventus_event_df = pd.DataFrame(self.events_data)
+        event_df = pd.DataFrame(self.events_data)
         self.close()
-        return eventus_event_df
+        return event_df
 
     def close(self):
         """브라우저 종료"""

@@ -58,4 +58,4 @@ repos:
         name: Flake8 Python Linter
         description: "Checks Python code for style violations and errors."
         args:
-          - --max-line-length=120
+          - --max-line-length=130

@@ -11,14 +11,18 @@ import logging
 import os
 import pendulum
 
-from include.custom_platform_functions.eventus.eventus_functions import (
-    EventUsCrawler,
-)
+from include.custom_platform_functions import EventUsCrawler, MeetupsCrawler
 
 t_log = logging.getLogger("airflow.task")
 
 _SQLITE_DB_PATH = os.getenv("SQLITE_DB_PATH", "include/events.db")
 _SQLITE_TABLE_NAME = os.getenv("SQLITE_TABLE_NAME", "event_data")
+
+EVENT_CRAWLERS = [
+    EventUsCrawler,
+    MeetupsCrawler,
+    # 추후 새로운 크롤러 추가 가능
+]
 
 
 @dag(
@@ -33,7 +37,7 @@ _SQLITE_TABLE_NAME = os.getenv("SQLITE_TABLE_NAME", "event_data")
         "retries": 3,
         "retry_delay": duration(seconds=30),
     },
-    tags=["event-us", "ETL", "crawler"],
+    tags=["event-us", "meetups", "ETL", "crawler"],
 )
 def dev_event_crawler():
 
@@ -41,7 +45,7 @@ def dev_event_crawler():
     def create_event_table_in_sqlite(
         db_path: str = _SQLITE_DB_PATH, table_name: str = _SQLITE_TABLE_NAME
     ) -> None:
-        t_log.info("Creating event table in SQLite.")
+        t_log.info("SQLite에 이벤트 테이블을 생성합니다.")
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
         cursor.execute(
@@ -61,22 +65,45 @@ def dev_event_crawler():
         )
         conn.commit()
         conn.close()
-        t_log.info("Event table created in SQLite.")
+        t_log.info("SQLite에 이벤트 테이블이 생성되었습니다.")
 
     @task
     def crawl_events() -> pd.DataFrame:
-        t_log.info("Crawling events.")
-        crawler = EventUsCrawler()
-        events = crawler.fetch_events_upcoming_2_months()
-        t_log.info("Events crawled.")
-        return events
+        """등록된 모든 크롤러에서 이벤트 데이터를 가져옴"""
+        all_events = []
+        for Crawler in EVENT_CRAWLERS:
+            crawler = Crawler()
+            t_log.info(f"Crawling events from {Crawler.__name__}")
+            events = crawler.fetch_events_upcoming_2_months()
+            if events is not None and not events.empty:
+                all_events.append(events)
+
+        if all_events:
+            merged_events = pd.concat(all_events, ignore_index=True)
+        else:
+            merged_events = pd.DataFrame(
+                columns=[
+                    "title",
+                    "url",
+                    "date",
+                    "description",
+                    "price",
+                    "location",
+                    "host",
+                ]
+            )
+
+        t_log.info(
+            f"Total {len(merged_events)} events crawled from all sources."
+        )
+        return merged_events
 
     @task
     def delete_past_events_from_sqlite(
         db_path: str = _SQLITE_DB_PATH,
         table_name: str = _SQLITE_TABLE_NAME,
     ) -> None:
-        t_log.info("Deleting past events from SQLite.")
+        t_log.info("SQLite에서 지난 이벤트를 삭제합니다.")
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
 
@@ -90,7 +117,7 @@ def dev_event_crawler():
         )
         conn.commit()
         conn.close()
-        t_log.info("Past events deleted from SQLite.")
+        t_log.info("SQLite에서 지난 이벤트를 삭제했습니다.")
 
     @task(outlets=[Dataset(_SQLITE_DB_PATH)])
     def insert_or_update_events_into_sqlite(
@@ -98,7 +125,11 @@ def dev_event_crawler():
         db_path: str = _SQLITE_DB_PATH,
         table_name: str = _SQLITE_TABLE_NAME,
     ) -> None:
-        t_log.info("Inserting or updating events into SQLite.")
+        t_log.info("SQLite에 이벤트를 삽입하거나 업데이트합니다.")
+        if events.empty:
+            t_log.info("삽입하거나 업데이트할 이벤트가 없습니다.")
+            return
+
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
 
@@ -128,11 +159,12 @@ def dev_event_crawler():
             )
         conn.commit()
         conn.close()
-        t_log.info("Events inserted or updated in SQLite.")
+        t_log.info("SQLite에 이벤트가 삽입되거나 업데이트되었습니다.")
 
     create_event_table_in_sqlite_obj = create_event_table_in_sqlite()
     crawl_events_obj = crawl_events()
     delete_past_events_obj = delete_past_events_from_sqlite()
+
     insert_or_update_events_into_sqlite_obj = (
         insert_or_update_events_into_sqlite(crawl_events_obj)
     )
