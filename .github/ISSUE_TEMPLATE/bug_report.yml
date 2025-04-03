@@ -1,0 +1,46 @@
+---
+name: Bug report
+description: 코드에서 발생한 문제 및 이슈
+labels: ["bug"]
+body:
+  - type: textarea
+    attributes:
+      label: 어떤 문제가 발생했나요?
+      description: 발생한 문제를 설명해주세요.
+      placeholder: >
+        문제가 발생한 상황을 설명하고, 어떤 일이 일어났는지 알려주세요.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: 기대했던 동작은 무엇인가요?
+      description: 무엇이 잘못되었다고 생각하시나요?
+      placeholder: >
+        왜 이 동작이 잘못되었다고 생각하는지 설명해주세요.
+        오류 메시지나 잘못된 동작을 보여주는 로그를 복사하여 붙여넣으면 도움이 됩니다.
+  - type: textarea
+    attributes:
+      label: 재현 방법
+      description: >
+        어떻게 하면 이 문제를 재현할 수 있나요?
+        만약 재현 가능한 사례를 제공할 수 없다면,[discussion](https://github.com/SUSC-KR/Dev-Event-Crawler/discussions)을 열어주세요.
+      placeholder: >
+        가능한 한 최소한의 단계로 문제를 재현할 수 있도록 설명해주세요.
+    validations:
+      required: true
+  - type: checkboxes
+    attributes:
+      label: PR을 직접 해볼 의샹이 있나요?
+      options:
+        - label: 네, 저는 직접 PR을 할 의샹이 있습니다!
+  - type: checkboxes
+    attributes:
+      label: Code of Conduct
+      options:
+        - label: >
+            저는 SUSC의 오픈소스 프로젝트의
+            [Code of Conduct](https://github.com/SUSC-KR/CodeOfConduct)에 동의합니다.
+          required: true
+  - type: markdown
+    attributes:
+      value: "이슈를 제출해주셔서 감사드립니다!"

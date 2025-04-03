@@ -1,0 +1,35 @@
+---
+name: Feature request
+description: 이 프로젝트에 대한 아이디어를 제안해주세요.
+labels: ["enhancement"]
+body:
+  - type: textarea
+    attributes:
+      label: Description
+      description: 제안하는 기능에 대한 간단한 설명을 작성해주세요.
+  - type: textarea
+    attributes:
+      label: Use case/motivation
+      description: 원하는 기능이 어떤 방식으로 도움이 될지 설명해주세요.
+      placeholder: >
+          이 기능을 어떻게 구현할지보다는, 어떤 문제를 해결하려 하는지 또는 무엇을 달성하려 하는지를 설명해주세요.
+  - type: textarea
+    attributes:
+      label: 관련된 이슈
+      description: 이 기능 요청과 관련된 다른 이슈가 있다면 작성해주세요.
+  - type: checkboxes
+    attributes:
+      label: PR을 직접 해볼 의샹이 있나요?
+      options:
+        - label: 네, 저는 직접 PR을 할 의샹이 있습니다!
+  - type: checkboxes
+    attributes:
+      label: Code of Conduct
+      options:
+        - label: >
+            저는 SUSC의 오픈소스 프로젝트의
+            [Code of Conduct](https://github.com/SUSC-KR/CodeOfConduct)에 동의합니다.
+          required: true
+  - type: markdown
+    attributes:
+      value: "이슈를 제출해주셔서 감사드립니다!"
