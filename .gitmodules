@@ -1,0 +1,3 @@
+[submodule "Dev-Events"]
+	path = Dev-Events
+	url = https://github.com/SUSC-KR/Dev-Events.git
