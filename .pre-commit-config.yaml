@@ -19,7 +19,7 @@ repos:
       - id: blacken-docs
         name: Run black on docs
         args:
-          - --line-length=120
+          - --line-length=160
           - --target-version=py39
           - --target-version=py310
           - --target-version=py311
