@@ -4,9 +4,17 @@ from pendulum import datetime, duration
 import sqlite3
 import logging
 import os
+import subprocess
+import shutil
 
 from include.utils import commit_and_push_changes
-from include.config import SQLITE_DB_PATH, SQLITE_TABLE_NAME, MARKDOWN_FILE_PATH
+from include.config import (
+    SQLITE_DB_PATH,
+    SQLITE_TABLE_NAME,
+    REPO_URL,
+    REPO_PATH,
+    MARKDOWN_FILE_PATH,
+)
 
 t_log = logging.getLogger("airflow.task")
 
@@ -25,6 +33,30 @@ t_log = logging.getLogger("airflow.task")
     tags=["Github", "README"],
 )
 def modify_and_commit():
+    @task(retries=3, retry_delay=duration(seconds=30))
+    def clone_or_update_repo(
+        repo_url: str = REPO_URL, dest_path: str = REPO_PATH
+    ) -> str:
+        git_dir = os.path.join(dest_path, ".git")
+        if os.path.exists(dest_path) and os.path.exists(git_dir):
+            t_log.info(
+                f"Git repo exists at {dest_path}, pulling latest changes."
+            )
+            try:
+                subprocess.run(["git", "pull"], cwd=dest_path, check=True)
+            except subprocess.CalledProcessError as e:
+                t_log.error(f"Failed to pull: {e}")
+                raise
+        else:
+            if os.path.exists(dest_path):
+                t_log.warning(
+                    f"{dest_path} exists but not a git repo. Deleting and recloning."
+                )
+                shutil.rmtree(dest_path)
+            subprocess.run(["git", "clone", repo_url, dest_path], check=True)
+            t_log.info(f"Cloned repository to {dest_path}")
+
+        return dest_path
 
     @task(retries=2)
     def modify_readme(
@@ -89,9 +121,17 @@ def modify_and_commit():
     def commit_changes(file_path: str):
         commit_message = "Updated README.md via Airflow DAG"
         repo_path = os.path.dirname(file_path)
-        commit_and_push_changes(repo_path, commit_message)
 
-    commit_changes(modify_readme())
+        try:
+            commit_and_push_changes(repo_path, commit_message)
+            t_log.info("Changes committed and pushed successfully.")
+        except Exception as e:
+            t_log.error(f"Error committing changes: {e}")
+            raise
+
+    repo_path = clone_or_update_repo()
+    readme_path = modify_readme()
+    repo_path >> readme_path >> commit_changes(readme_path)
 
 
 modify_and_commit_dag = modify_and_commit()
