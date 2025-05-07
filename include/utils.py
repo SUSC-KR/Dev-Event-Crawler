@@ -30,15 +30,20 @@ def delete_past_events(db_path, table_name):
 def commit_and_push_changes(repo_path, commit_message):
     """Git 커밋 및 푸시"""
     try:
+        username = os.getenv("GITHUB_USERNAME")
+        email = os.getenv("GITHUB_EMAIL")
+        token = os.getenv("GITHUB_TOKEN")
+
+        if not username or not email or not token:
+            raise EnvironmentError(
+                "GitHub credentials missing in environment variables"
+            )
+
         subprocess.run(
-            ["git", "config", "user.name", os.getenv("GITHUB_USERNAME")],
-            cwd=repo_path,
-            check=True,
+            ["git", "config", "user.name", username], cwd=repo_path, check=True
         )
         subprocess.run(
-            ["git", "config", "user.email", os.getenv("GITHUB_EMAIL")],
-            cwd=repo_path,
-            check=True,
+            ["git", "config", "user.email", email], cwd=repo_path, check=True
         )
 
         status_result = subprocess.run(
@@ -57,13 +62,15 @@ def commit_and_push_changes(repo_path, commit_message):
             ["git", "commit", "-m", commit_message], cwd=repo_path, check=True
         )
 
-        git_url = f"https://{os.getenv('GITHUB_USERNAME')}:{os.getenv('GITHUB_TOKEN')}@github.com/SUSC-KR/Dev-Events.git"
+        safe_git_url = (
+            f"https://{username}:{token}@github.com/SUSC-KR/Dev-Events.git"
+        )
         subprocess.run(
-            ["git", "push", git_url, "main"], cwd=repo_path, check=True
+            ["git", "push", safe_git_url, "main"], cwd=repo_path, check=True
         )
 
         t_log.info("Changes committed and pushed successfully.")
 
     except subprocess.CalledProcessError as e:
-        t_log.error(f"Git command failed: {e.stderr}")
+        t_log.error(f"Git command failed: {e.stderr or str(e)}")
         raise
